@@ -5,6 +5,12 @@
 #include<Winsock2.h>
 
 #include<stdio.h>
+
+struct DataPackage {
+	int age;
+	char name[32];
+};
+
 int main() {
 	// 启动windows socket 2.x环境
 	WORD ver = MAKEWORD(2, 2);
@@ -48,7 +54,8 @@ int main() {
 		char recvBuf[256] = {};
 		int nlen = recv(_sock, recvBuf, 256, 0);
 		if (nlen > 0) {
-			printf("recv %s \n", recvBuf);
+			DataPackage* dp = (DataPackage*)recvBuf;
+			printf("recv {姓名:%s,年龄:%d}\n", dp->name, dp->age);
 		}
 	}
 	// 4.关闭套接字socket

@@ -4,6 +4,12 @@
 #include<Winsock2.h>
 
 #include<stdio.h>
+
+struct DataPackage{
+	int age;
+	char name[32];
+};
+
 int main() {
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
@@ -64,6 +70,10 @@ int main() {
 		else if (0 == strcmp(_recvBuf, "getAge")) {
 			char msgBuf[] = "80";
 			send(_csock, msgBuf, strlen(msgBuf) + 1, 0);
+		}
+		else if (0 == strcmp(_recvBuf, "getInfo")) {
+			DataPackage dp = {80, "XiaoQiang"};
+			send(_csock, (const char*)&dp, sizeof(DataPackage), 0);
 		}
 		else {
 			char msgBuff[] = "???.";
