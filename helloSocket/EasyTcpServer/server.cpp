@@ -5,6 +5,29 @@
 
 #include<stdio.h>
 
+enum CMD{
+	CMD_LOGIN,
+	CMD_LOGOUT,
+	CMD_ERROR
+};
+struct DataHeader {
+	short dataLength;
+	short cmd;
+};
+struct Login {
+	char userName[32];
+	char password[32];
+};
+struct LoginResult {
+	int result;
+};
+struct Logout {
+	char userName[32];
+};
+struct LogoutResult {
+	int result;
+};
+
 struct DataPackage{
 	int age;
 	char name[32];
@@ -55,29 +78,40 @@ int main() {
 	
 	while (true) {
 		// 5.接收客户端数据
-		char _recvBuf[128] = {};
-		int nLen = recv(_csock, _recvBuf,128, 0);
-		printf("接收客户端命令： %s\n", _recvBuf);
+		DataHeader header = {};
+		int nLen = recv(_csock, (char*)&header,sizeof(DataHeader), 0);
+		printf("接收客户端命令： %d 数据长度 %d\n", header.cmd, header.dataLength);
 		if (nLen < 0) {
 			printf("客户端已退出， 任务结束。\n");
 			break;
 		}
 		// 6.处理请求并发送数据
-		if (0 == strcmp(_recvBuf, "getName")) {
-			char msgBuf[] = "Xiao Qiang";
-			send(_csock, msgBuf, strlen(msgBuf)+1,0);
-		}
-		else if (0 == strcmp(_recvBuf, "getAge")) {
-			char msgBuf[] = "80";
-			send(_csock, msgBuf, strlen(msgBuf) + 1, 0);
-		}
-		else if (0 == strcmp(_recvBuf, "getInfo")) {
-			DataPackage dp = {80, "XiaoQiang"};
-			send(_csock, (const char*)&dp, sizeof(DataPackage), 0);
-		}
-		else {
-			char msgBuff[] = "???.";
-			send(_csock, msgBuff, strlen(msgBuff) + 1, 0);
+		switch (header.cmd)
+		{
+			case CMD_LOGIN: {
+				Login login = {};
+				recv(_csock, (char*)&login, sizeof(Login), 0);
+				printf("登陆用户名称： %s, 用户密码： %s \n", login.userName, login.password);
+				LoginResult logRet = { 0 };
+				send(_csock, (const char*)&header, sizeof(DataHeader), 0);
+				send(_csock, (const char*)&logRet, sizeof(LoginResult), 0);
+			}
+			break;
+			case CMD_LOGOUT: {
+				Logout logout = {};
+				recv(_csock, (char*)&logout, sizeof(Logout), 0);
+				printf("登出用户名称： %s\n", logout.userName);
+				LogoutResult logoutRet = { 1 };
+				send(_csock, (const char*)&header, sizeof(DataHeader), 0);
+				send(_csock, (const char*)&logoutRet, sizeof(LogoutResult), 0);
+			}
+			break;
+			default: {
+				header.cmd = CMD_ERROR;
+				header.dataLength = 0;
+				send(_csock, (const char*)&header, sizeof(DataHeader), 0);
+			}
+			break;
 		}
 	}
 

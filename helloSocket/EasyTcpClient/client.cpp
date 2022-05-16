@@ -6,6 +6,28 @@
 
 #include<stdio.h>
 
+enum CMD {
+	CMD_LOGIN,
+	CMD_LOGOUT,
+	CMD_ERROR
+};
+struct DataHeader {
+	short dataLength;
+	short cmd;
+};
+struct Login {
+	char userName[32];
+	char password[32];
+};
+struct LoginResult {
+	int result;
+};
+struct Logout {
+	char userName[32];
+};
+struct LogoutResult {
+	int result;
+};
 struct DataPackage {
 	int age;
 	char name[32];
@@ -47,15 +69,30 @@ int main() {
 			printf("收到退出命令");
 			break;
 		}
-		else {
-			send(_sock, cmdBuf, strlen(cmdBuf) + 1, 0);
+		else if(0 == strcmp(cmdBuf, "login")){
+			Login login = {"tony", "zhou123456"};
+			DataHeader header = {sizeof(Login), CMD_LOGIN};
+			send(_sock, (const char*)&header, sizeof(DataHeader), 0);
+			send(_sock, (const char*)&login, sizeof(Login), 0);
+			DataHeader headRet = {};
+			LoginResult ret = {};
+			recv(_sock, (char*)&headRet, sizeof(DataHeader), 0);
+			recv(_sock, (char*)&ret, sizeof(LoginResult), 0);
+			printf("登陆收到服务器返回结果： %d \n", ret.result);
 		}
-		// 接收服务器信息 recv
-		char recvBuf[256] = {};
-		int nlen = recv(_sock, recvBuf, 256, 0);
-		if (nlen > 0) {
-			DataPackage* dp = (DataPackage*)recvBuf;
-			printf("recv {姓名:%s,年龄:%d}\n", dp->name, dp->age);
+		else if (0 == strcmp(cmdBuf, "logout")) {
+			Logout logout = { "tony" };
+			DataHeader header = { sizeof(Login), CMD_LOGOUT };
+			send(_sock, (const char*)&header, sizeof(DataHeader), 0);
+			send(_sock, (const char*)&logout, sizeof(Logout), 0);
+			DataHeader headRet = {};
+			LogoutResult ret = {};
+			recv(_sock, (char*)&headRet, sizeof(DataHeader), 0);
+			recv(_sock, (char*)&ret, sizeof(LogoutResult), 0);
+			printf("登出收到服务器返回结果： %d \n", ret.result);
+		}
+		else {
+			printf("不支持的命令，请重新输入。\n");
 		}
 	}
 	// 4.关闭套接字socket
