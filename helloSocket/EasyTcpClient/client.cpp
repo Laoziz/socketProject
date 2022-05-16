@@ -9,28 +9,44 @@
 enum CMD {
 	CMD_LOGIN,
 	CMD_LOGOUT,
+	CMD_LOGIN_RESULT,
+	CMD_LOGOUT_RESULT,
 	CMD_ERROR
 };
 struct DataHeader {
 	short dataLength;
 	short cmd;
 };
-struct Login {
+struct Login : public DataHeader {
+	Login() {
+		dataLength = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
 	char userName[32];
 	char password[32];
 };
-struct LoginResult {
+struct LoginResult : public DataHeader {
+	LoginResult() {
+		dataLength = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 0;
+	}
 	int result;
 };
-struct Logout {
+struct Logout : public DataHeader {
+	Logout() {
+		dataLength = sizeof(Logout);
+		cmd = CMD_LOGOUT;
+	}
 	char userName[32];
 };
-struct LogoutResult {
+struct LogoutResult : public DataHeader {
+	LogoutResult() {
+		dataLength = sizeof(LogoutResult);
+		cmd = CMD_LOGOUT_RESULT;
+		result = 0;
+	}
 	int result;
-};
-struct DataPackage {
-	int age;
-	char name[32];
 };
 
 int main() {
@@ -70,24 +86,19 @@ int main() {
 			break;
 		}
 		else if(0 == strcmp(cmdBuf, "login")){
-			Login login = {"tony", "zhou123456"};
-			DataHeader header = {sizeof(Login), CMD_LOGIN};
-			send(_sock, (const char*)&header, sizeof(DataHeader), 0);
+			Login login;
+			strcpy(login.userName, "tony");
+			strcpy(login.password, "zhou123456");
 			send(_sock, (const char*)&login, sizeof(Login), 0);
-			DataHeader headRet = {};
 			LoginResult ret = {};
-			recv(_sock, (char*)&headRet, sizeof(DataHeader), 0);
 			recv(_sock, (char*)&ret, sizeof(LoginResult), 0);
 			printf("登陆收到服务器返回结果： %d \n", ret.result);
 		}
 		else if (0 == strcmp(cmdBuf, "logout")) {
-			Logout logout = { "tony" };
-			DataHeader header = { sizeof(Login), CMD_LOGOUT };
-			send(_sock, (const char*)&header, sizeof(DataHeader), 0);
+			Logout logout;
+			strcpy(logout.userName, "tony");
 			send(_sock, (const char*)&logout, sizeof(Logout), 0);
-			DataHeader headRet = {};
 			LogoutResult ret = {};
-			recv(_sock, (char*)&headRet, sizeof(DataHeader), 0);
 			recv(_sock, (char*)&ret, sizeof(LogoutResult), 0);
 			printf("登出收到服务器返回结果： %d \n", ret.result);
 		}

@@ -5,32 +5,47 @@
 
 #include<stdio.h>
 
-enum CMD{
+enum CMD {
 	CMD_LOGIN,
 	CMD_LOGOUT,
+	CMD_LOGIN_RESULT,
+	CMD_LOGOUT_RESULT,
 	CMD_ERROR
 };
 struct DataHeader {
 	short dataLength;
 	short cmd;
 };
-struct Login {
+struct Login : public DataHeader {
+	Login() {
+		dataLength = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
 	char userName[32];
 	char password[32];
 };
-struct LoginResult {
+struct LoginResult : public DataHeader {
+	LoginResult() {
+		dataLength = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 0;
+	}
 	int result;
 };
-struct Logout {
+struct Logout : public DataHeader {
+	Logout() {
+		dataLength = sizeof(Logout);
+		cmd = CMD_LOGOUT;
+	}
 	char userName[32];
 };
-struct LogoutResult {
+struct LogoutResult : public DataHeader {
+	LogoutResult() {
+		dataLength = sizeof(LogoutResult);
+		cmd = CMD_LOGOUT_RESULT;
+		result = 0;
+	}
 	int result;
-};
-
-struct DataPackage{
-	int age;
-	char name[32];
 };
 
 int main() {
@@ -90,19 +105,17 @@ int main() {
 		{
 			case CMD_LOGIN: {
 				Login login = {};
-				recv(_csock, (char*)&login, sizeof(Login), 0);
-				printf("登陆用户名称： %s, 用户密码： %s \n", login.userName, login.password);
-				LoginResult logRet = { 0 };
-				send(_csock, (const char*)&header, sizeof(DataHeader), 0);
+				recv(_csock, (char*)&login+sizeof(DataHeader), sizeof(Login)-sizeof(DataHeader), 0);
+				printf("登陆命令： CMD_LOGIN 登陆用户名称： %s, 用户密码： %s \n", login.userName, login.password);
+				LoginResult logRet;
 				send(_csock, (const char*)&logRet, sizeof(LoginResult), 0);
 			}
 			break;
 			case CMD_LOGOUT: {
 				Logout logout = {};
-				recv(_csock, (char*)&logout, sizeof(Logout), 0);
-				printf("登出用户名称： %s\n", logout.userName);
-				LogoutResult logoutRet = { 1 };
-				send(_csock, (const char*)&header, sizeof(DataHeader), 0);
+				recv(_csock, (char*)&logout + sizeof(DataHeader), sizeof(Logout) - sizeof(DataHeader), 0);
+				printf("登陆命令： CMD_LOGOUT 登出用户名称： %s\n", logout.userName);
+				LogoutResult logoutRet;
 				send(_csock, (const char*)&logoutRet, sizeof(LogoutResult), 0);
 			}
 			break;
