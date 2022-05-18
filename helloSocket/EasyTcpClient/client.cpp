@@ -5,6 +5,7 @@
 #include<Winsock2.h>
 
 #include<stdio.h>
+#include<thread>
 
 enum CMD {
 	CMD_LOGIN,
@@ -57,6 +58,35 @@ struct NewUserJoin : public DataHeader {
 	}
 	int result;
 };
+
+bool g_Exit = true;
+void cmdThread (SOCKET _sock) {
+	while (true) {
+		// 3.输入请求命令
+		char cmdBuf[128] = {};
+		scanf("%s", cmdBuf);
+		// 处理请求命令
+		if (0 == strcmp(cmdBuf, "exit")) {
+			printf("收到退出命令");
+			g_Exit = false;
+			return;
+		}
+		else if (0 == strcmp(cmdBuf, "login")) {
+			Login login;
+			strcpy(login.userName, "tony");
+			strcpy(login.password, "zhou123456");
+			send(_sock, (const char*)&login, sizeof(Login), 0);
+		}
+		else if (0 == strcmp(cmdBuf, "logout")) {
+			Logout logout;
+			strcpy(logout.userName, "tony");
+			send(_sock, (const char*)&logout, sizeof(Logout), 0);
+		}
+		else {
+			printf("不支持的命令，请重新输入。\n");
+		}
+	}
+}
 
 int processor(SOCKET _csock) { 
 	// 5.接收服务端数据
@@ -120,7 +150,9 @@ int main() {
 	else {
 		printf("连接服务器成功 \n");
 	}
-	while (true) {
+	std::thread td(cmdThread, _sock);
+	td.detach();
+	while (g_Exit) {
 
 		fd_set fdRead;
 		FD_ZERO(&fdRead);
@@ -137,41 +169,7 @@ int main() {
 			FD_CLR(_sock, &fdRead);
 			processor(_sock);
 		}
-		printf("空闲时间处理其它业务。。。。\n");
-		//Sleep(15);
-		//Login login;
-		//strcpy(login.userName, "tony");
-		//strcpy(login.password, "zhou123456");
-		//send(_sock, (const char*)&login, sizeof(Login), 0);
-		
-		//// 3.输入请求命令
-		//char cmdBuf[128] = {};
-		//scanf("%s", cmdBuf);
-		//// 处理请求命令
-		//if (0 == strcmp(cmdBuf, "exit")) {
-		//	printf("收到退出命令");
-		//	break;
-		//}
-		//else if(0 == strcmp(cmdBuf, "login")){
-		//	Login login;
-		//	strcpy(login.userName, "tony");
-		//	strcpy(login.password, "zhou123456");
-		//	send(_sock, (const char*)&login, sizeof(Login), 0);
-		//	LoginResult ret = {};
-		//	recv(_sock, (char*)&ret, sizeof(LoginResult), 0);
-		//	printf("登陆收到服务器返回结果： %d \n", ret.result);
-		//}
-		//else if (0 == strcmp(cmdBuf, "logout")) {
-		//	Logout logout;
-		//	strcpy(logout.userName, "tony");
-		//	send(_sock, (const char*)&logout, sizeof(Logout), 0);
-		//	LogoutResult ret = {};
-		//	recv(_sock, (char*)&ret, sizeof(LogoutResult), 0);
-		//	printf("登出收到服务器返回结果： %d \n", ret.result);
-		//}
-		//else {
-		//	printf("不支持的命令，请重新输入。\n");
-		//}
+		//printf("空闲时间处理其它业务。。。。\n");
 	}
 	// 4.关闭套接字socket
 	closesocket(_sock);
