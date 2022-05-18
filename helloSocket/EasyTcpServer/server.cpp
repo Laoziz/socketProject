@@ -10,6 +10,7 @@ enum CMD {
 	CMD_LOGOUT,
 	CMD_LOGIN_RESULT,
 	CMD_LOGOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
 struct DataHeader {
@@ -43,6 +44,14 @@ struct LogoutResult : public DataHeader {
 	LogoutResult() {
 		dataLength = sizeof(LogoutResult);
 		cmd = CMD_LOGOUT_RESULT;
+		result = 0;
+	}
+	int result;
+};
+struct NewUserJoin : public DataHeader {
+	NewUserJoin() {
+		dataLength = sizeof(NewUserJoin);
+		cmd = CMD_NEW_USER_JOIN;
 		result = 0;
 	}
 	int result;
@@ -122,32 +131,36 @@ int main() {
 	}
 
 	while (true) {
-		// 伯克利 socket 
-		fd_set fdRead;
+		// 伯克利套接字 BSD socket 
+		fd_set fdRead; // 描述符集合
 		fd_set fdWrite;
 		fd_set fdExp;
 
+		// 清理集合
 		FD_ZERO(&fdRead);
 		FD_ZERO(&fdWrite);
 		FD_ZERO(&fdExp);
 
+		// 将描述符(socket)加入集合
 		FD_SET(_sock, &fdRead);
 		FD_SET(_sock, &fdWrite);
 		FD_SET(_sock, &fdExp);
 
-		for (int i = 0; i < g_clients.size(); i++)
+		for (size_t i = 0; i < g_clients.size(); i++)
 		{
 			FD_SET(g_clients[i], &fdRead);
 		}
 		// nfds是一个整数，是指fd_set集合中所有描述符（socket）的范围，而不是数量
 		// 既是所有描述符最大值加1，在windows上这个指可以写0
-		timeval t = {0, 0};
+		timeval t = {1, 0};
 		int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExp, &t);
+		//// 阻塞模式
+		//int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExp, NULL);
 		if (ret < 0) {
 			printf("select 任务结束。 \n");
 			break;
 		}
-
+		// 判断描述符(socket)是否在集合中
 		if (FD_ISSET(_sock, &fdRead)) {
 			FD_CLR(_sock, &fdRead);
 
@@ -160,9 +173,15 @@ int main() {
 			if (INVALID_SOCKET == _csock) {
 				printf("错误，接收到无效客户端SOCKET...\n");
 			}
-			printf("新客户端加入： %d IP = %s \n", (int)_csock, inet_ntoa(clientAddr.sin_addr));
-
-			g_clients.push_back(_csock);
+			else {
+				printf("新客户端加入： %d IP = %s \n", (int)_csock, inet_ntoa(clientAddr.sin_addr));
+				NewUserJoin newUserJoin;
+				for (size_t i = 0; i < g_clients.size(); i++)
+				{
+					send(g_clients[i], (const char*)&newUserJoin, sizeof(NewUserJoin), 0);
+				}
+				g_clients.push_back(_csock);
+			}
 		}
 
 		for (size_t i = 0; i < fdRead.fd_count; i++)
@@ -174,9 +193,10 @@ int main() {
 				}
 			}
 		}
+		printf("空闲时间处理其它业务。。。。\n");
 	}
 
-	for (int i = 0; i < g_clients.size(); i++)
+	for (size_t i = 0; i < g_clients.size(); i++)
 	{
 		closesocket(g_clients[i]);
 	}
