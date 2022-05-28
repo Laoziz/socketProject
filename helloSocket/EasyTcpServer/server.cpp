@@ -124,7 +124,7 @@ int main() {
 	_sin.sin_family = AF_INET;
 	_sin.sin_port = htons(4567);// host to net unsigned short
 #ifdef _WIN32
-	_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	_sin.sin_addr.S_un.S_addr = INADDR_ANY;
 #else
 	_sin.sin_addr.s_addr = INADDR_ANY;
 #endif
