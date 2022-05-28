@@ -1,8 +1,18 @@
 #define WIN32_LEAN_AND_MEAN
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
-#include<windows.h>
-#include<Winsock2.h>
+
+#ifdef _WIN32
+	#include<windows.h>
+	#include<Winsock2.h>
+#else
+	#include<unistd.h> // uni std
+	#include<arpa/inet.h>
+	#include<string.h>
+	#define SOCKET int
+	#define INVALID_SOCKET (SOCKET)(~0)
+	#define SOCKET_ERROR -1
+#endif
 
 #include<stdio.h>
 #include<thread>
@@ -124,10 +134,12 @@ int processor(SOCKET _csock) {
 	return 0;
 }
 int main() {
+#ifdef _WIN32
 	// 启动windows socket 2.x环境
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
 	WSAStartup(ver, &dat);
+#endif
 
 	// 用socket API建立简易TCP客户端
 	// 1.建立一个socket
@@ -142,7 +154,11 @@ int main() {
 	sockaddr_in _sin = {};
 	_sin.sin_family = AF_INET;
 	_sin.sin_port = htons(4567);
+#ifdef _WIN32
 	_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+#else
+	_sin.sin_addr.s_addr = inet_addr("192.168.31.68");
+#endif
 	int ret = connect(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in));
 	if (SOCKET_ERROR == ret) {
 		printf("错误，连接服务器失败...\n");
@@ -159,7 +175,7 @@ int main() {
 		FD_SET(_sock, &fdRead);
 
 		timeval t = { 1, 0 };
-		int ret = select(_sock, &fdRead, 0, 0, &t);
+		int ret = (int)select(_sock+1, &fdRead, 0, 0, &t);
 		if (ret < 0) {
 			printf("select任务结束\n");
 			break;
@@ -171,9 +187,13 @@ int main() {
 		}
 		//printf("空闲时间处理其它业务。。。。\n");
 	}
+#ifdef _WIN32
 	// 4.关闭套接字socket
 	closesocket(_sock);
 	WSACleanup();
+#else
+	close(_sock);
+#endif
 	printf("任务结束，程序退出\n");
 	getchar();
 	return 0;
