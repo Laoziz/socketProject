@@ -192,7 +192,7 @@ int main() {
 			_csock = accept(_sock, (sockaddr*)&clientAddr, &nAddrLen);
 #else
 			_csock = accept(_sock, (sockaddr*)&clientAddr, (socklen_t *)&nAddrLen);
-#endif // _WIN
+#endif
 
 
 			if (INVALID_SOCKET == _csock) {
@@ -210,10 +210,12 @@ int main() {
 		}
 		for (int i = (int)g_clients.size() - 1; i >= 0; i--)
 		{
-			if (-1 == processor(g_clients[i])) {
-				auto iter = g_clients.begin() + i;
-				if (iter != g_clients.end()) {
-					g_clients.erase(iter);
+			if (FD_ISSET(g_clients[i], &fdRead)) {
+				if (-1 == processor(g_clients[i])) {
+					auto iter = g_clients.begin() + i;
+					if (iter != g_clients.end()) {
+						g_clients.erase(iter);
+					}
 				}
 			}
 		}
