@@ -101,7 +101,7 @@ void cmdThread (SOCKET _sock) {
 int processor(SOCKET _csock) { 
 	// 5.接收服务端数据
 	char recvBuf[1024] = {};
-	int nLen = recv(_csock, (char*)&recvBuf, sizeof(DataHeader), 0);
+	int nLen = (int)recv(_csock, (char*)&recvBuf, sizeof(DataHeader), 0);
 	DataHeader * header = (DataHeader*)recvBuf;
 	//printf("接收服务端命令： %d 数据长度 %d\n", recvBuf.cmd, recvBuf.dataLength);
 	if (nLen < 0) {
@@ -155,16 +155,16 @@ int main() {
 	_sin.sin_family = AF_INET;
 	_sin.sin_port = htons(4567);
 #ifdef _WIN32
-	_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");// win 68,mac 126,ubuntu 164
 #else
-	_sin.sin_addr.s_addr = inet_addr("192.168.31.68");
+	_sin.sin_addr.s_addr = inet_addr("192.168.31.126");
 #endif
 	int ret = connect(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in));
 	if (SOCKET_ERROR == ret) {
 		printf("错误，连接服务器失败...\n");
 	}
 	else {
-		printf("连接服务器成功 \n");
+		printf("连接服务器成功%d \n", ret);
 	}
 	std::thread td(cmdThread, _sock);
 	td.detach();
@@ -175,7 +175,7 @@ int main() {
 		FD_SET(_sock, &fdRead);
 
 		timeval t = { 1, 0 };
-		int ret = (int)select(_sock+1, &fdRead, 0, 0, &t);
+		int ret = (int)select(_sock + 1, &fdRead, 0, 0, &t);
 		if (ret < 0) {
 			printf("select任务结束\n");
 			break;
@@ -183,7 +183,9 @@ int main() {
 
 		if (FD_ISSET(_sock, &fdRead)) {
 			FD_CLR(_sock, &fdRead);
-			processor(_sock);
+			if (SOCKET_ERROR == processor(_sock)) {
+				break;
+			}
 		}
 		//printf("空闲时间处理其它业务。。。。\n");
 	}
