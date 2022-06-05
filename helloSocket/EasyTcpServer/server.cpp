@@ -91,7 +91,7 @@ int processor(SOCKET _csock) {
 	case CMD_LOGOUT: {
 		recv(_csock, recvBuf + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 		Logout* logout = (Logout*)recvBuf;
-		printf("登陆命令： CMD_LOGOUT 包体长度：%d;登出用户名称： %s\n", header->dataLength, logout->userName);
+		printf("登出命令： CMD_LOGOUT 包体长度：%d;登出用户名称： %s\n", header->dataLength, logout->userName);
 		LogoutResult logoutRet;
 		send(_csock, (const char*)&logoutRet, sizeof(LogoutResult), 0);
 	}
