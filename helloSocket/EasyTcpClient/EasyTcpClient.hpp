@@ -4,6 +4,7 @@
 #ifdef _WIN32
 	#include<windows.h>
 	#include<Winsock2.h>
+	#pragma comment(lib, "Ws2_32.lib")
 #else
 	#include<unistd.h> // uni std
 	#include<arpa/inet.h>
@@ -45,7 +46,7 @@ public:
 		}
 		_sock = socket(AF_INET, SOCK_STREAM, 0);
 		if (_sock == INVALID_SOCKET) {
-			printf("错误，建立socket成功\n");
+			printf("错误，建立socket失败\n");
 		}
 		else {
 			printf("建立socket网络成功\n");
@@ -87,30 +88,34 @@ public:
 		}
 		_sock = INVALID_SOCKET;
 	}
-	// 发送数据
-	// 接收数据
 	// 处理网络消息
 	bool onRun() {
-		fd_set fdRead;
-		FD_ZERO(&fdRead);
-		FD_SET(_sock, &fdRead);
+		if (isRun()) {
+			fd_set fdRead;
+			FD_ZERO(&fdRead);
+			FD_SET(_sock, &fdRead);
 
-		timeval t = { 1, 0 };
-		int ret = (int)select(_sock + 1, &fdRead, 0, 0, &t);
-		if (ret < 0) {
-			printf("<socket=%d>select任务结束\n", _sock);
-			return false;
-		}
-
-		if (FD_ISSET(_sock, &fdRead)) {
-			FD_CLR(_sock, &fdRead);
-			if (SOCKET_ERROR == RecvData()) {
-				printf("<socket=%d>select任务结束2\n", _sock);
+			timeval t = { 1, 0 };
+			int ret = (int)select(_sock + 1, &fdRead, 0, 0, &t);
+			if (ret < 0) {
+				printf("<socket=%d>select任务结束\n", _sock);
+				Close();
 				return false;
 			}
+
+			if (FD_ISSET(_sock, &fdRead)) {
+				FD_CLR(_sock, &fdRead);
+				if (SOCKET_ERROR == RecvData()) {
+					printf("<socket=%d>select任务结束2\n", _sock);
+					Close();
+					return false;
+				}
+			}
+			return true;
 		}
-		return true;
+		return false;
 	}
+	// 是否工作中
 	bool isRun() {
 		return INVALID_SOCKET != _sock;
 	}
@@ -131,7 +136,7 @@ public:
 		OnNetMsg(header);
 		return 0;
 	}
-	void OnNetMsg(DataHeader* header) {
+	virtual void OnNetMsg(DataHeader* header) {
 		switch (header->cmd)
 		{
 		case CMD_LOGIN_RESULT: {

@@ -14,7 +14,7 @@ void cmdThread (EasyTcpClient* client) {
 		if (0 == strcmp(cmdBuf, "exit")) {
 			printf("收到退出命令");
 			client->Close();
-			return;
+			break;
 		}
 		else if (0 == strcmp(cmdBuf, "login")) {
 			Login login;
@@ -31,13 +31,14 @@ void cmdThread (EasyTcpClient* client) {
 			printf("不支持的命令，请重新输入。\n");
 		}
 	}
+	printf("退出线程。\n");
 }
 
 int main() {
 
 	EasyTcpClient client;
 	client._sock;
-	client.Connect("127.0.0.1", 4567);// win 192.168.31.68,mac 192.168.31.126,ubuntu 192.168.
+	client.Connect("192.168.31.164", 4567);// win 192.168.31.68,mac 192.168.31.126,ubuntu 192.168.31.164
 	std::thread td(cmdThread, &client);
 	td.detach();
 	while (client.isRun()) {
