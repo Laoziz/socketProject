@@ -8,6 +8,10 @@ enum CMD {
 	CMD_ERROR
 };
 struct DataHeader {
+	DataHeader() {
+		dataLength = sizeof(dataLength);
+		cmd = CMD_ERROR;
+	}
 	short dataLength;
 	short cmd;
 };
@@ -15,17 +19,22 @@ struct Login : public DataHeader {
 	Login() {
 		dataLength = sizeof(Login);
 		cmd = CMD_LOGIN;
+		//memset(data, 0, sizeof(data));
 	}
 	char userName[32];
 	char password[32];
+	char data[932];
 };
+
 struct LoginResult : public DataHeader {
 	LoginResult() {
 		dataLength = sizeof(LoginResult);
 		cmd = CMD_LOGIN_RESULT;
+		//memset(data, 0, sizeof(data));
 		result = 0;
 	}
 	int result;
+	char data[992];
 };
 struct Logout : public DataHeader {
 	Logout() {
@@ -46,7 +55,7 @@ struct NewUserJoin : public DataHeader {
 	NewUserJoin() {
 		dataLength = sizeof(NewUserJoin);
 		cmd = CMD_NEW_USER_JOIN;
-		result = 0;
+		sock = 0;
 	}
-	int result;
+	int sock;
 };

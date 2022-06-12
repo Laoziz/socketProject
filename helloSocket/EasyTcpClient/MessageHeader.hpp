@@ -1,5 +1,5 @@
-//#ifndef _MessageHeader_hpp_
-//#define _MessageHeader_hpp_
+#ifndef _MessageHeader_hpp_
+#define _MessageHeader_hpp_
 enum CMD {
 	CMD_LOGIN,
 	CMD_LOGOUT,
@@ -9,6 +9,10 @@ enum CMD {
 	CMD_ERROR
 };
 struct DataHeader {
+	DataHeader() {
+		dataLength = sizeof(dataLength);
+		cmd = CMD_ERROR;
+	}
 	short dataLength;
 	short cmd;
 };
@@ -16,17 +20,22 @@ struct Login : public DataHeader {
 	Login() {
 		dataLength = sizeof(Login);
 		cmd = CMD_LOGIN;
+		//memset(data, 0, sizeof(data));
 	}
 	char userName[32];
 	char password[32];
+	char data[932];
 };
+
 struct LoginResult : public DataHeader {
 	LoginResult() {
 		dataLength = sizeof(LoginResult);
 		cmd = CMD_LOGIN_RESULT;
+		//memset(data, 0, sizeof(data));
 		result = 0;
 	}
 	int result;
+	char data[992];
 };
 struct Logout : public DataHeader {
 	Logout() {
@@ -51,4 +60,4 @@ struct NewUserJoin : public DataHeader {
 	}
 	int result;
 };
-//#endif // !_MessageHeader_hpp_
+#endif // !_MessageHeader_hpp_

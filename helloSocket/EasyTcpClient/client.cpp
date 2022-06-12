@@ -38,10 +38,15 @@ int main() {
 
 	EasyTcpClient client;
 	client._sock;
-	client.Connect("192.168.31.164", 4567);// win 192.168.31.68,mac 192.168.31.126,ubuntu 192.168.31.164
+	client.Connect("127.0.0.1", 3001);// win 192.168.31.68,mac 192.168.31.126,ubuntu 192.168.31.164 centos 49.235.145.15
 	std::thread td(cmdThread, &client);
 	td.detach();
+
+	Login login;
+	strcpy(login.userName, "tony");
+	strcpy(login.password, "zhou123456");
 	while (client.isRun()) {
+		client.SendData(&login);
 		client.onRun();
 	}
 	client.Close();
