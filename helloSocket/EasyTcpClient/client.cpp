@@ -5,6 +5,7 @@
 
 #include "EasyTcpClient.hpp"
 
+bool g_run = true;
 void cmdThread (EasyTcpClient* client) {
 	while (true) {
 		// 3.输入请求命令
@@ -13,6 +14,7 @@ void cmdThread (EasyTcpClient* client) {
 		// 处理请求命令
 		if (0 == strcmp(cmdBuf, "exit")) {
 			printf("收到退出命令");
+			g_run = false;
 			client->Close();
 			break;
 		}
@@ -35,22 +37,39 @@ void cmdThread (EasyTcpClient* client) {
 }
 
 int main() {
+#ifdef _WIN32
+	SetConsoleTitle(L"EasyTcpClient");
+#endif // _WIN32
 
-	EasyTcpClient client;
-	client._sock;
-	client.Connect("127.0.0.1", 3001);// win 192.168.31.68,mac 192.168.31.126,ubuntu 192.168.31.164 centos 49.235.145.15
-	std::thread td(cmdThread, &client);
-	td.detach();
+	const int cCount = 10000;
+	EasyTcpClient* client[cCount];
+	for (int i = 0; i < cCount; i++) {
+		client[i] = new EasyTcpClient();
+		client[i]->Connect("127.0.0.1", 3001);// win 192.168.31.68,mac 192.168.31.126,ubuntu 192.168.31.164 centos 49.235.145.15
+		printf("Connect count<%d> \n",i);
+	}
+
+	//EasyTcpClient client;
+	//client.Connect("127.0.0.1", 3001);
+	
+	//std::thread td(cmdThread, &client);
+	//td.detach();
 
 	Login login;
 	strcpy(login.userName, "tony");
 	strcpy(login.password, "zhou123456");
-	while (client.isRun()) {
-		client.SendData(&login);
-		client.onRun();
+	while (g_run) {
+		for (int i = 0; i < cCount; i++) {
+			client[i]->SendData(&login);
+			//client[i]->onRun();
+		}
+		//client.SendData(&login);
+		//client.onRun();
 	}
-	client.Close();
-
+	for (int i = 0; i < cCount; i++) {
+		client[i]->Close();
+	}
+	//client.Close();
 	printf("任务结束，程序退出\n");
 	getchar();
 	return 0;

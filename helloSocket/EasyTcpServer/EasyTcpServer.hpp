@@ -1,5 +1,6 @@
 #pragma once
 #ifdef _WIN32
+#define FD_SETSIZE 20000
 	#include<windows.h>
 	#include<Winsock2.h>
 	#pragma comment(lib, "Ws2_32.lib")
@@ -15,7 +16,7 @@
 #include<stdio.h>
 #include<vector>
 #include "MessageHeader.hpp"
-
+#include "CELLTimestamp.hpp"
 // 缓冲区最小单元大小
 #ifndef RECV_BUFF_SIZE
 #define RECV_BUFF_SIZE 10240
@@ -53,6 +54,7 @@ public:
 	EasyTcpServer() {
 		_sock = INVALID_SOCKET;
 		_port = -1;
+		_recvCount = 0;
 	}
 	virtual ~EasyTcpServer() {
 		Close();
@@ -145,9 +147,9 @@ public:
 			printf("socket=<%d>错误，接收到无效客户端SOCKET...\n", (int)_sock);
 		}
 		else {
-			printf("socket=<%d>新客户端加入： socket=<%d>,IP=<%s> \n", (int)_sock, (int)csock, inet_ntoa(clientAddr.sin_addr));
-			NewUserJoin newUserJoin;
-			SendDataToAll(&newUserJoin);
+			//printf("socket=<%d>新客户端加入： socket=<%d>,IP=<%s> count=%d\n", (int)_sock, (int)csock, inet_ntoa(clientAddr.sin_addr), _clients.size());
+			//NewUserJoin newUserJoin;
+			//SendDataToAll(&newUserJoin);
 			_clients.push_back(new ClientSocket(csock));
 		}
 		return csock;
@@ -180,7 +182,7 @@ public:
 			}
 			// nfds是一个整数，是指fd_set集合中所有描述符（socket）的范围，而不是数量
 			// 既是所有描述符最大值加1，在windows上这个指可以写0
-			timeval t = { 1, 0 };
+			timeval t = {0, 0 };
 			int ret = (int)select(maxSocket + 1, &fdRead, &fdWrite, &fdExp, &t);
 			//// 阻塞模式
 			//int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExp, NULL);
@@ -193,6 +195,7 @@ public:
 			if (FD_ISSET(_sock, &fdRead)) {
 				FD_CLR(_sock, &fdRead);
 				Accept();
+				return true;
 			}
 			for (int i = (int)_clients.size() - 1; i >= 0; i--)
 			{
@@ -247,22 +250,29 @@ public:
 		return 0;
 	}
 	virtual void OnNetMsg(SOCKET csock, DataHeader* header) {
+		_recvCount++;
+		auto tl = _tTime.getElapsedSecond();
+		if (tl >= 1.0) {
+			printf("time<%lf>,socket<%d>,clientCount<%d>,recvCount<%d> \n", tl, _sock, (int)_clients.size(), _recvCount);
+			_tTime.update();
+			_recvCount = 0;
+		}
 		// 6.处理请求并发送数据
 		switch (header->cmd)
 		{
 		case CMD_LOGIN: {
 			Login* login = (Login*)header;
 			//printf("登陆命令： CMD_LOGIN 包体长度：%d;登陆用户名称： %s, 用户密码： %s \n", header->dataLength, login->userName, login->password);
-			LoginResult logRet;
-			SendData(csock, &logRet);
+			//LoginResult logRet;
+			//SendData(csock, &logRet);
 		}
 						break;
 		case CMD_LOGOUT: {
 
 			Logout* logout = (Logout*)header;
 			//printf("登出命令： CMD_LOGOUT 包体长度：%d;登出用户名称： %s\n", header->dataLength, logout->userName);
-			LogoutResult logoutRet;
-			SendData(csock, &logoutRet);
+			//LogoutResult logoutRet;
+			//SendData(csock, &logoutRet);
 		}
 						 break;
 		default: {
@@ -319,4 +329,6 @@ private:
 	SOCKET _sock;
 	int _port;
 	std::vector<ClientSocket*> _clients;
+	CELLTimestamp _tTime;
+	int _recvCount;
 };

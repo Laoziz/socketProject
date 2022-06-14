@@ -2,6 +2,7 @@
 #define _EasyTcpClient_hpp_
 
 #ifdef _WIN32
+#define FD_SETSIZE 20000
 	#include<windows.h>
 	#include<Winsock2.h>
 	#pragma comment(lib, "Ws2_32.lib")
@@ -48,7 +49,7 @@ public:
 			printf("错误，建立socket失败\n");
 		}
 		else {
-			printf("建立socket网络成功\n");
+			//printf("建立socket网络成功\n");
 		}
 	}
 	// 连接服务器
@@ -70,7 +71,7 @@ public:
 			printf("错误，连接服务器失败...\n");
 		}
 		else {
-			printf("连接服务器成功%d \n", ret);
+			//printf("连接服务器成功%d \n", ret);
 		}
 		return ret;
 	}

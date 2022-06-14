@@ -23,6 +23,10 @@ void cmdThread() {
 }
 
 int main() {
+#ifdef _WIN32
+	SetConsoleTitle(L"EasyTcpServer");
+#endif // _WIN32
+
 	EasyTcpServer server;
 	server.Bind(nullptr, 3001);
 	server.Listen(5);
