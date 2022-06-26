@@ -20,11 +20,10 @@
 #include "MessageHeader.hpp"
 
 class EasyTcpClient {
-	
 public:
-	SOCKET _sock;
 	EasyTcpClient() {
 		_sock = INVALID_SOCKET;
+		_isConnected = false;
 	}
 	virtual ~EasyTcpClient() {
 		Close();
@@ -71,6 +70,7 @@ public:
 			printf("错误，连接服务器失败...\n");
 		}
 		else {
+			_isConnected = true;
 			//printf("连接服务器成功%d \n", ret);
 		}
 		return ret;
@@ -87,6 +87,7 @@ public:
 #endif
 		}
 		_sock = INVALID_SOCKET;
+		_isConnected = false;
 	}
 	// 处理网络消息
 	bool onRun() {
@@ -193,11 +194,17 @@ public:
 	}
 	// 发送数据
 	int SendData(DataHeader* header) {
+		int ret = SOCKET_ERROR;
 		if (isRun() && header) {
-			return send(_sock, (const char*)header, header->dataLength, 0);
+			ret = send(_sock, (const char*)header, header->dataLength, 0);
+			if (SOCKET_ERROR == ret) {
+				Close();
+			}
 		}
-		return SOCKET_ERROR;
+		return ret;
 	}
 private:
+	bool _isConnected;
+	SOCKET _sock;
 };
 #endif // _EasyTcpClient_hpp_

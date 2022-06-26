@@ -26,10 +26,10 @@ int main() {
 	SetConsoleTitle(L"EasyTcpServer");
 #endif // _WIN32
 
-	EasyTcpServer server;
+	MyServer server;
 	server.Bind(nullptr, 3001);
 	server.Listen(5);
-	server.Start();
+	server.Start(4);
 	std::thread td(cmdThread);
 	td.detach();
 

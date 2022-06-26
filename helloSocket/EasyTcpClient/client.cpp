@@ -33,6 +33,7 @@ const int tCount = 4;
 EasyTcpClient* client[cCount];
 
 void sendThread(int id) { 
+	printf("thread<%d>, start \n", id);
 	// Ïß³ÌID 1~4
 	int c = cCount / tCount;
 	int begin = (id - 1) * c;
@@ -41,9 +42,9 @@ void sendThread(int id) {
 		client[i] = new EasyTcpClient();
 	}
 	for (int i = begin; i < end; i++) {
-		client[i]->Connect("127.0.0.1", 3001);// win 192.168.31.68,mac 192.168.31.126,ubuntu 192.168.31.164 centos 49.235.145.15
-		printf("Connect count<%d> \n", i);
+		client[i]->Connect("127.0.0.1", 3001);// win 192.168.31.68/ 192.168.31.233,mac 192.168.31.126,ubuntu 192.168.31.164 centos 49.235.145.15
 	}
+	printf("thread<%d>, Connect count<begin=%d, end=%d> \n", id, begin, end);
 
 	std::chrono::microseconds t(3000);
 	std::this_thread::sleep_for(t);
@@ -58,7 +59,9 @@ void sendThread(int id) {
 	}
 	for (int i = begin; i < end; i++) {
 		client[i]->Close();
+		delete client[i];
 	}
+	printf("thread<%d>, Exit \n", id);
 }
 int main() {
 #ifdef _WIN32
