@@ -2,7 +2,6 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #include "EasyTcpServer.hpp"
-#include<thread>
 
 bool isRun = true;
 void cmdThread() {
@@ -30,7 +29,7 @@ int main() {
 	EasyTcpServer server;
 	server.Bind(nullptr, 3001);
 	server.Listen(5);
-
+	server.Start();
 	std::thread td(cmdThread);
 	td.detach();
 
@@ -39,6 +38,6 @@ int main() {
 	}
 	server.Close();
 	printf("任务结束，程序退出 \n");
-	getchar();
+	system("pause");
 	return 0;
 }

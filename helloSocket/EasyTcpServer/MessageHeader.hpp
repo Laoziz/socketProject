@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _MessageHeader_hpp_
+#define _MessageHeader_hpp_
 enum CMD {
 	CMD_LOGIN,
 	CMD_LOGOUT,
@@ -23,7 +24,7 @@ struct Login : public DataHeader {
 	}
 	char userName[32];
 	char password[32];
-	char data[932];
+	char data[32];
 };
 
 struct LoginResult : public DataHeader {
@@ -34,7 +35,7 @@ struct LoginResult : public DataHeader {
 		result = 0;
 	}
 	int result;
-	char data[992];
+	char data[92];
 };
 struct Logout : public DataHeader {
 	Logout() {
@@ -55,7 +56,8 @@ struct NewUserJoin : public DataHeader {
 	NewUserJoin() {
 		dataLength = sizeof(NewUserJoin);
 		cmd = CMD_NEW_USER_JOIN;
-		sock = 0;
+		result = 0;
 	}
-	int sock;
+	int result;
 };
+#endif // !_MessageHeader_hpp_
