@@ -15,6 +15,7 @@
 
 #include<stdio.h>
 #include<vector>
+#include<map>
 #include<thread>
 #include<mutex>
 #include<atomic>
@@ -153,15 +154,20 @@ public:
 		//}
 		//}
 	}
+	bool _clients_change;
+	fd_set _fdRead_bak;
+	SOCKET _maxSocket;
 	// 处理网络消息
 	void OnRun() {
+		_clients_change = true;
 		while (isRun()) {
 			if (_clientsBuff.size() > 0) {
 				std::lock_guard<std::mutex> lock(_mutex);
 				for (auto pClient : _clientsBuff) {
-					_clients.push_back(pClient);
+					_clients[pClient->sockfd()] = pClient;
 				}
 				_clientsBuff.clear();
+				_clients_change = true;
 			}
 			// 如果没有需要处理的客户端，就跳过
 			if (_clients.empty()) {
@@ -176,18 +182,26 @@ public:
 			FD_ZERO(&fdRead);
 
 			// 将描述符(socket)加入集合
-			SOCKET maxSocket = _clients[0]->sockfd();
-			for (int i = (int)_clients.size() - 1; i >= 0; i--)
-			{
-				FD_SET(_clients[i]->sockfd(), &fdRead);
-				if (maxSocket < _clients[i]->sockfd()) {
-					maxSocket = _clients[i]->sockfd();
+			if (_clients_change) {
+				_clients_change = false;
+				_maxSocket = 0;
+				for (auto iter : _clients)
+				{
+					FD_SET(iter.first, &fdRead);
+					if (_maxSocket < iter.first) {
+						_maxSocket = iter.first;
+					}
 				}
+				memcpy(&_fdRead_bak, &fdRead, sizeof(fd_set));
 			}
+			else {
+				memcpy(&fdRead, &_fdRead_bak, sizeof(fd_set));
+			}
+
 			// nfds是一个整数，是指fd_set集合中所有描述符（socket）的范围，而不是数量
 			// 既是所有描述符最大值加1，在windows上这个指可以写0
-			timeval t = { 0, 10 };
-			int ret = (int)select(maxSocket + 1, &fdRead, nullptr, nullptr, nullptr);
+			timeval t = { 0, 0 };
+			int ret = (int)select(_maxSocket + 1, &fdRead, nullptr, nullptr, &t);
 			//// 阻塞模式
 			//int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExp, NULL);
 			if (ret < 0) {
@@ -195,21 +209,44 @@ public:
 				Close();
 				return ;
 			}
-			for (int i = (int)_clients.size() - 1; i >= 0; i--)
-			{
-				if (FD_ISSET(_clients[i]->sockfd(), &fdRead)) {
-					if (-1 == RecvData(_clients[i])) {
-						auto iter = _clients.begin() + i;
-						if (iter != _clients.end()) {
-							if (_pINetEvent) {
-								_pINetEvent->OnLeave(_clients[i]);
-							}
-							delete _clients[i];
-							_clients.erase(iter);
+			else if (ret == 0) {
+				continue;
+			}
+#ifdef _WIN32
+			for (size_t i = 0; i < fdRead.fd_count; i++) {
+				auto iter = _clients.find(fdRead.fd_array[i]);
+				if (iter != _clients.end()) {
+					if (-1 == RecvData(iter->second)) {
+						_clients_change = true;
+						if (_pINetEvent) {
+							_pINetEvent->OnLeave(iter->second);
 						}
+						delete iter->second;
+						_clients.erase(iter->first);
+					}
+				}
+				else {
+					printf("err find no client\n");
+				}
+			}
+#else
+			std::vector<ClientSocket*> temp;
+			for (auto iter : _clients) {
+				if (FD_ISSET(iter.first, &fdRead)) {
+					if (-1 == RecvData(iter.second)) {
+						_clients_change = false;
+						if (_pINetEvent) {
+							_pINetEvent->OnLeave(iter.second);
+						}
+						temp.push_back(iter.second);
 					}
 				}
 			}
+			for (auto iter : temp) {
+				_clients.erase(iter->sockfd());
+				delete iter;
+			}
+#endif // _WIN32
 		}
 	}
 	// 是否工作中
@@ -220,20 +257,17 @@ public:
 	void Close() {
 		if (INVALID_SOCKET != _sock) {
 #ifdef _WIN32
-			for (size_t i = _clients.size() - 1; i >= 0; i--)
+			for (auto iter : _clients)
 			{
-				closesocket(_clients[i]->sockfd());
-				delete _clients[i];
+				closesocket(iter.first);
+				delete iter.second;
 			}
-			// 6.关闭套接字socket
-			closesocket(_sock);
 #else
-			for (int i = (int)_clients.size() - 1; i >= 0; i--)
+			for (auto iter : _clients)
 			{
-				close(_clients[i]->sockfd());
-				delete _clients[i];
+				close(iter.first);
+				delete iter.second;
 			}
-			close(_sock);
 #endif
 			_sock = INVALID_SOCKET;
 			_clients.clear();
@@ -256,7 +290,7 @@ public:
 	}
 private:
 	SOCKET _sock;
-	std::vector<ClientSocket*> _clients;
+	std::map<SOCKET, ClientSocket*> _clients;
 	std::vector<ClientSocket*> _clientsBuff;
 	// 缓冲队列锁
 	std::mutex _mutex;
@@ -483,13 +517,13 @@ class MyServer : public EasyTcpServer {
 	// 只会被一个线程调用 安全
 	virtual void OnJoin(ClientSocket* pClient) {
 		_ClientCount++;
-		printf("socket<=%d> join \n", pClient->sockfd());
+		//printf("socket<=%d> join \n", pClient->sockfd());
 	}
 	// cellServer 4 线程不安全
 	// 单线程为安全
 	virtual void OnLeave(ClientSocket* pClient) {
 		_ClientCount--;
-		printf("socket<=%d> leave \n", pClient->sockfd());
+		//printf("socket<=%d> leave \n", pClient->sockfd());
 	}
 	// cellServer 4 多个线程触发，不安全
 	// 单线程为安全
@@ -501,8 +535,8 @@ class MyServer : public EasyTcpServer {
 		case CMD_LOGIN: {
 			Login* login = (Login*)header;
 			//printf("登陆命令： CMD_LOGIN 包体长度：%d;登陆用户名称： %s, 用户密码： %s \n", header->dataLength, login->userName, login->password);
-			//LoginResult logRet;
-			//pClient->SendData(&logRet);
+			LoginResult logRet;
+			pClient->SendData(&logRet);
 		}
 						break;
 		case CMD_LOGOUT: {
