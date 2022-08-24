@@ -2,15 +2,15 @@
 #define _MessageHeader_hpp_
 enum CMD {
 	CMD_LOGIN,
-	CMD_LOGOUT,
 	CMD_LOGIN_RESULT,
+	CMD_LOGOUT,
 	CMD_LOGOUT_RESULT,
 	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
 struct DataHeader {
 	DataHeader() {
-		dataLength = sizeof(dataLength);
+		dataLength = sizeof(DataHeader);
 		cmd = CMD_ERROR;
 	}
 	short dataLength;

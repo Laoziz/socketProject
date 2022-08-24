@@ -10,7 +10,7 @@ enum CMD {
 };
 struct DataHeader {
 	DataHeader() {
-		dataLength = sizeof(dataLength);
+		dataLength = sizeof(DataHeader);
 		cmd = CMD_ERROR;
 	}
 	short dataLength;
